@@ -104,41 +104,28 @@ class RGB_LED(object):
 # 7. send data to server
 # 8. repeat from 4
 # 9. shows error on screen, exit
-
+global running
 running = True
-def log_reading():
-    while running:
-        humidity,temperature = DHT.read_retry(dht_sensor, self.dht_pin)
-        if humidity is not None and temperature is not None:
-            print (f'Humidity: {humidity}%, Temperature: {temperature}*C')
-        else:
-            print ("Reading failed.")
-        print (GPIO.input(self.ldr_pin))
-        print ("")
-        try: 
-            print('Raw ADC Value: ', channel.value)
-            print('ADC Voltage: ' + str(channel.voltage) + 'V')
-            print ("")
-        except:
-            print ("Something is wrong.")
-        time.sleep(wait_time)
+
 
 def switch():
     ON = True
     OFF = False
     state = ON
     rgb_led = RGB_LED(rgb_red_pin, rgb_blue_pin, rgb_green_pin)
+    rgb_led.output("blue", "on")
     while True:
         button_state = GPIO.input(button_pin)
         print(button_state)
         if button_state == 0:
-            sleep(0.5)
+            time.sleep(0.5)
             if state == OFF:
                 state = ON
             else:
                 state = OFF
         if state == ON:
             try:
+                global running
                 running = True
                 rgb_led.output("red", "off")
                 rgb_led.output("blue", "off")
@@ -149,6 +136,7 @@ def switch():
                 rgb_led.output("green", "off")
         else:
             try:
+                global running
                 running = False
                 rgb_led.output("red", "off")
                 rgb_led.output("blue", "on")
@@ -158,7 +146,25 @@ def switch():
                 rgb_led.output("blue", "off")
                 rgb_led.output("green", "off")
            
-
+def log_reading():
+    global running
+    while running:
+        humidity,temperature = DHT.read_retry(dht_sensor, dht_pin)
+        if humidity is not None and temperature is not None:
+            print (f'Humidity: {humidity}%, Temperature: {temperature}*C')
+        else:
+            print ("Reading failed.")
+        print (GPIO.input(ldr_pin))
+        print ("")
+        # try: 
+        #     print('Raw ADC Value: ', channel.value)
+        #     print('ADC Voltage: ' + str(channel.voltage) + 'V')
+        #     print ("")
+        # except:
+        #     print ("Something is wrong.")
+        
+        os.system("raspistill -o test.jpg")
+        time.sleep(wait_time)
 switch_thread = Thread (target = switch)
 log_reading_thread = Thread (targer = log_reading)
 
