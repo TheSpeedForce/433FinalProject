@@ -1,3 +1,13 @@
+# 1. everything is off, led is blue (standby)
+# 2. button press? pressed: goes to 3; else: 1
+# 3. runs all functions, error? yes: led turns red, goes to 9; no: led turns on green, goes to 4
+# 4. get reading from all sensor and camera
+# 5. save in log files
+# 6. read log file to make data file
+# 7. send data to server
+# 8. repeat from 4
+# 9. shows error on screen, exit
+
 from threading import Thread
 
 # Import Raspberry Pi GPIO library
@@ -53,38 +63,13 @@ class RGB_LED(object):
     def output(self, pin, command):
         GPIO.output(self.pins[pin], self.commands[command])
 
-# class weather_sensors(object):
-#     def __init__(self,dht_pin, ldr_pin, water_pin):
-#         self.running = True
-#         self.dht_pin = dht_pin
-#         self.ldr_pin = ldr_pin
-#         self.water_pin = water_pin
-    
-#     def dht_sensor(self):
-#         sensor = DHT.DHT11
-#         while True:
-#             humidity,temperature = DHT.read_retry(sensor, self.dht_pin)
-#             if humidity is not None and temperature is not None:
-#                 print (f'Humidity: {humidity}%, Temperature: {temperature}*C')
-#             else:
-#                 print ("Reading failed.")
-#             time.sleep(wait_time)
-
-#     def ldr_sensor(self):
-#         while True:
-#             print (GPIO.input(self.ldr_pin))
-#             print ("")
-#             time.sleep(wait_time)
-#     def water_sensor(self):
-#         pass
-    
 class weather_reporter(object):
     def __init__(self):
-        self.running = True
+        self.keepGoing = False
     def terminate(self):
-        self.running = False
+        self.keepGoing = False
     def log_reading(self):
-        while self.running:
+        while self.keepGoing:
             humidity,temperature = DHT.read_retry(dht_sensor, dht_pin)
             if humidity is not None and temperature is not None:
                 print (f'Humidity: {humidity}%, Temperature: {temperature}*C')
@@ -99,23 +84,7 @@ class weather_reporter(object):
             # except:
             #     print ("Something is wrong.")
             
-            #os.system("raspistill -o test.jpg -n")
-            time.sleep(wait_time)
-
-
-# 1. everything is off, led is blue (standby)
-# 2. button press? pressed: goes to 3; else: 1
-# 3. runs all functions, error? yes: led turns red, goes to 9; no: led turns on green, goes to 4
-# 4. get reading from all sensor and camera
-# 5. save in log files
-# 6. read log file to make data file
-# 7. send data to server
-# 8. repeat from 4
-# 9. shows error on screen, exit
-global running
-running = False
-
-
+            os.system("raspistill -o test.jpg -n")
 
 def switch():
     ON = True
@@ -123,24 +92,21 @@ def switch():
     state = OFF
     rgb_led = RGB_LED(rgb_red_pin, rgb_blue_pin, rgb_green_pin)
     rgb_led.output("blue", "on")
+    reporter  = weather_reporter()
     while True:
-        button_state = GPIO.input(button_pin)
-        print(button_state)
-        if button_state == 0:
-            time.sleep(0.5)
-            if state == OFF:
-                state = ON
-            else:
-                state = OFF
+        GPIO.wait_for_edge(button_pin, GPIO.RISING)
+        if state == OFF:
+            state = ON
+        else:
+            state = OFF
 
         if state == ON:
             try:
-                reporter  = weather_reporter()
-                reporterThread = Thread(target = reporter.log_reading)
-                reporterThread.start();
                 rgb_led.output("red", "off")
                 rgb_led.output("blue", "off")
                 rgb_led.output("green", "on")
+                reporterThread = Thread(target = reporter.log_reading)
+                reporterThread.start();
             except:
                 rgb_led.output("red", "on")
                 rgb_led.output("blue", "off")
@@ -157,81 +123,6 @@ def switch():
                 rgb_led.output("green", "off")
            
 
-#switch_thread = Thread (target = switch)
+switch_thread = Thread (target = switch)
 
-#switch_thread.start()
-global off
-off = True
-def on(button_pin):
-    global off
-    if off:
-        print (1)
-        rgb_led.output("green", "on")
-        off = False
-        time.sleep(2)
-    else:
-        rgb_led.output("green", "off")
-        off = True
-        time.sleep(2)
-        
-def off():
-    rgb_led("green", "off")
-    
-#GPIO.add_event_detect(button_pin, GPIO.RISING, callback = on)
-
-
-rgb_led = RGB_LED(rgb_red_pin, rgb_blue_pin, rgb_green_pin)
-rgb_led.output("blue", "on")
-ON = True
-OFF = False
-state = OFF
-    
-while True:
-    button_state = GPIO.input(button_pin)
-    print(button_state)
-    if button_state == 0:
-        time.sleep(1)
-        if state == OFF:
-            state = ON
-        else:
-            state = OFF
-
-    if state == ON:
-        try:
-            rgb_led.output("red", "off")
-            rgb_led.output("blue", "off")
-            rgb_led.output("green", "on")
-            humidity,temperature = DHT.read_retry(dht_sensor, dht_pin)
-            if humidity is not None and temperature is not None:
-                print (f'Humidity: {humidity}%, Temperature: {temperature}*C')
-            else:
-                print ("Reading failed.")
-            print (GPIO.input(ldr_pin))
-            print ("")
-            # try: 
-            #     print('Raw ADC Value: ', channel.value)
-            #     print('ADC Voltage: ' + str(channel.voltage) + 'V')
-            #     print ("")
-            # except:
-            #     print ("Something is wrong.")
-            
-            #os.system("raspistill -o test.jpg -n")
-            time.sleep(wait_time)
-
-            
-        except:
-            rgb_led.output("red", "on")
-            rgb_led.output("blue", "off")
-            rgb_led.output("green", "off")
-    else:
-        try:
-            rgb_led.output("red", "off")
-            rgb_led.output("blue", "on")
-            rgb_led.output("green", "off")
-        except:
-            rgb_led.output("red", "on")
-            rgb_led.output("blue", "off")
-            rgb_led.output("green", "off")
-       
-
-
+switch_thread.start()
